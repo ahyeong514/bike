@@ -136,7 +136,15 @@ with tab1:
     - 🟣 보라: 검색한 대여소
 
     마커 크기는 총 이용건수에 비례하며, 검색한 대여소는 크게 표시됩니다.
+    
+    ### 분석 목적
+    - 대여-반납 차이가 큰 대여소를 파악해 자전거 부족 및 과잉 문제를 식별하고 재배치 효율성을 높입니다.
+   
+    ### 예상 결론
+    - 이용률 저조한 대여소는 단계적 통폐합 또는 인근 인기 대여소 주변으로 이전하여 운영비용 절감 및 자원 효율을 극대화합니다.
+    
     """)
+    
     
 # ================================
 # TAB 2: 고장 분석
@@ -203,7 +211,7 @@ with tab2:
         stats = filtered_df.groupby("fault_type")["cumulative_km_at_fault"].describe()[["count", "mean", "std", "min", "25%", "50%", "75%", "max"]]
         stats = stats.loc[selected_types]
         st.dataframe(stats.style.format(precision=2))
-
+        
 # ================================
 # TAB 3: 자전거 렌탈수 & 기상 상관관계
 # ================================
@@ -281,7 +289,6 @@ with tab3:
     fig.update_layout(yaxis=dict(title='렌탈수 합계'), xaxis=dict(title='월'))
 
     st.plotly_chart(fig, use_container_width=True)
-
     # 최대/최소 월 출력
     st.markdown(f"**1년 중 가장 렌탈 수가 많은 달: {max_rent['월']} ({max_rent['렌탈수 합계']:,}건)**")
     st.markdown(f"**1년 중 가장 렌탈 수가 적은 달: {min_rent['월']} ({min_rent['렌탈수 합계']:,}건)**")
@@ -294,26 +301,38 @@ with tab3:
     - 무더운 여름(6~8월)은 기온 영향과 강수량에 따라 변동이 있습니다.
     """)
 
-    # 계절 선택 UI
+    #   계절 선택 UI
     season = st.selectbox('계절을 선택하세요', ['봄', '여름', '가을', '겨울'])
     season_df = merged[merged['season'] == season]
 
     if season_df.empty:
         st.warning(f"{season} 데이터가 존재하지 않습니다.")
     else:
+        st.subheader(f"{season}의 상관관계 분석")
+
         # 상관관계 분석
         numeric_cols = season_df.select_dtypes(include='number').columns.tolist()
         corr = season_df[numeric_cols].corr()
 
+        # 'month' 컬럼이 있을 때만 drop
+        if 'month' in corr.columns:
+            rent_corr = corr.loc[['rent_count']].drop(['month'], axis=1)
+        else:
+            rent_corr = corr.loc[['rent_count']]
+    
         # 히트맵 시각화
-        st.subheader(f'📊 {season}의 상관관계 히트맵')
         plt.rcParams['font.family'] = 'Malgun Gothic'
         plt.rcParams['axes.unicode_minus'] = False
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(corr, annot=True, cmap='coolwarm', linewidths=0.5)
-        st.pyplot(plt)
+    
+        fig_full, ax_full = plt.subplots(figsize=(10, 8))
+        sns.heatmap(corr, annot=True, cmap='coolwarm', linewidths=0.5, ax=ax_full)
+        st.pyplot(fig_full)
 
-        # 해석 요약
+        fig_rent, ax_rent = plt.subplots(figsize=(10, 1.5))
+        sns.heatmap(rent_corr, annot=True, cmap='coolwarm', linewidths=0.5, ax=ax_rent)
+        st.pyplot(fig_rent)
+
+    # 해석 요약
         st.subheader('📌 분석 요약')
         if season == '겨울':
             st.markdown("- **기온이 낮고, 강수량이 많을수록 자전거 렌탈 수가 줄어드는 경향**이 있습니다.")
@@ -323,3 +342,14 @@ with tab3:
             st.markdown("- **날씨가 좋아 자전거 렌탈 수가 급증**하는 경향이 있습니다.")
         elif season == '가을':
             st.markdown("- **쾌적한 기후로 렌탈 수가 안정적으로 높은 편**입니다.")
+            
+            # 예) 인기 + 비효율 대여소 운영 분석 탭 내 상단에 안내 텍스트 추가
+
+    st.markdown("""
+    ### 분석 목적
+    - 기상 상황에 따른 이용량 변화를 분석해 날씨 기반 수요 예측 및 재배치 전략을 마련합니다.
+
+    ### 예상 결론
+    - 날씨 기반 수요 예측 및 자전거 재배치 전략 수립에 활용 이런식의 분석 목적과 분석 예상     """)
+
+
