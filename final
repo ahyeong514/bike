@@ -266,7 +266,7 @@ with tab3:
     # Plotly 막대그래프 그리기
     fig = px.bar(monthly_df, x='월', y='렌탈수 합계',
                  labels={'렌탈수 합계':'월별 렌탈수 합계', '월':'월'},
-                 title='월별 자전거 렌탈수와 평균기온',
+                 title='월별 자전거 렌탈 수',
                  hover_data={'평균기온': True, '렌탈수 합계': True},
                  text='렌탈수 합계')
 
@@ -294,24 +294,27 @@ with tab3:
     - 무더운 여름(6~8월)은 기온 영향과 강수량에 따라 변동이 있습니다.
     """)
 
-    # 계절 선택 UI
-    season = st.selectbox('계절을 선택하세요', ['봄', '여름', '가을', '겨울'])
-    season_df = merged[merged['season'] == season]
+        seasons = ['봄', '여름', '가을', '겨울']
 
+for season in seasons:
+    season_df = merged[merged['season'] == season]
+    st.subheader(f"{season} 상관관계 분석")
     if season_df.empty:
         st.warning(f"{season} 데이터가 존재하지 않습니다.")
     else:
-        # 상관관계 분석
         numeric_cols = season_df.select_dtypes(include='number').columns.tolist()
         corr = season_df[numeric_cols].corr()
-
-        # 히트맵 시각화
-        st.subheader(f'📊 {season}의 상관관계 히트맵')
+        # 'month' 컬럼이 있을 때만 drop
+        if 'month' in corr.columns:
+            rent_corr = corr.loc[['rent_count']].drop(['month'], axis=1)
+        else:
+            rent_corr = corr.loc[['rent_count']]
         plt.rcParams['font.family'] = 'Malgun Gothic'
         plt.rcParams['axes.unicode_minus'] = False
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(corr, annot=True, cmap='coolwarm', linewidths=0.5)
+        plt.figure(figsize=(10, 1))
+        sns.heatmap(rent_corr, annot=True, cmap='coolwarm', linewidths=0.5)
         st.pyplot(plt)
+        plt.close()
 
         # 해석 요약
         st.subheader('📌 분석 요약')
